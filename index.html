@@ -512,25 +512,29 @@ function initAudio() {
 
 // ---- Heartbeat sequence: normal → fast → very fast ----
 function startHeartbeatSequence() {
-  if (heartbeatPhase > 0) return;
-  heartbeatPhase = 1;
+  try {
+    if (heartbeatPhase > 0) return;
+    heartbeatPhase = 1;
 
-  // Fade in normal heartbeat
-  hbNormal.currentTime = 0;
-  hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
-  smoothVolume(hbNormal, 0, 0.35, 2000);
+    // Fade in normal heartbeat
+    hbNormal.currentTime = 0;
+    hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
+    smoothVolume(hbNormal, 0, 0.35, 2000);
 
-  // → fast after 5s
-  heartbeatTimer = setTimeout(() => {
-    heartbeatPhase = 2;
-    crossfadeHeartbeats(hbNormal, hbFast, 0.35);
-  }, 5000);
+    // → fast after 5s
+    heartbeatTimer = setTimeout(() => {
+      heartbeatPhase = 2;
+      crossfadeHeartbeats(hbNormal, hbFast, 0.35);
+    }, 5000);
 
-  // → very fast after 10s
-  heartbeatTimer = setTimeout(() => {
-    heartbeatPhase = 3;
-    crossfadeHeartbeats(hbFast, hbVeryFast, 0.4);
-  }, 10000);
+    // → very fast after 10s
+    heartbeatTimer = setTimeout(() => {
+      heartbeatPhase = 3;
+      crossfadeHeartbeats(hbFast, hbVeryFast, 0.4);
+    }, 10000);
+  } catch (e) {
+    console.warn('startHeartbeatSequence failed:', e.message);
+  }
 }
 
 function stopHeartbeatSequence() {
@@ -611,39 +615,47 @@ function createCalmPad() {
 }
 
 function switchToNormalBGM() {
-  // Fade out horror BGM
-  if (horrorBGM) horrorBGM.gain.setTargetAtTime(0, audioCtx ? audioCtx.currentTime : 0, 0.8);
-  stopHeartbeatSequence();
+  try {
+    // Fade out horror BGM
+    if (horrorBGM) horrorBGM.gain.setTargetAtTime(0, audioCtx ? audioCtx.currentTime : 0, 0.8);
+    stopHeartbeatSequence();
 
-  // Fade in MP3 BGM (primary)
-  if (bgmAudio.readyState >= 2) {
-    bgmAudio.play().catch(() => {});
-    smoothVolume(bgmAudio, bgmAudio.volume, 0.35, 2000);
-  } else {
-    // MP3 not ready yet — use Web Audio pad as filler
-    if (!calmPad && audioCtx) createCalmPad();
-    if (calmPad) calmPad.gain.setTargetAtTime(0.06, audioCtx.currentTime, 1.5);
-    // Once MP3 loads, crossfade
-    bgmAudio.addEventListener('canplaythrough', () => {
+    // Fade in MP3 BGM (primary)
+    if (bgmAudio.readyState >= 2) {
       bgmAudio.play().catch(() => {});
-      smoothVolume(bgmAudio, 0, 0.35, 2000);
-      if (calmPad) calmPad.gain.setTargetAtTime(0, audioCtx.currentTime, 2);
-    }, { once: true });
-    bgmAudio.load();
+      smoothVolume(bgmAudio, bgmAudio.volume, 0.35, 2000);
+    } else {
+      // MP3 not ready yet — use Web Audio pad as filler
+      if (!calmPad && audioCtx) createCalmPad();
+      if (calmPad) calmPad.gain.setTargetAtTime(0.06, audioCtx.currentTime, 1.5);
+      // Once MP3 loads, crossfade
+      bgmAudio.addEventListener('canplaythrough', () => {
+        bgmAudio.play().catch(() => {});
+        smoothVolume(bgmAudio, 0, 0.35, 2000);
+        if (calmPad) calmPad.gain.setTargetAtTime(0, audioCtx.currentTime, 2);
+      }, { once: true });
+      bgmAudio.load();
+    }
+  } catch (e) {
+    console.warn('switchToNormalBGM failed:', e.message);
   }
 }
 
 function switchToHorrorBGM() {
-  // Fade MP3 BGM down
-  smoothVolume(bgmAudio, bgmAudio.volume, 0, 2000);
-  // Fade ambient pad down
-  if (calmPad) calmPad.gain.setTargetAtTime(0, audioCtx ? audioCtx.currentTime : 0, 3);
-  // Start heartbeat sequence
-  startHeartbeatSequence();
-  // Start horror drone
-  if (!audioCtx) return;
-  if (!horrorBGM) createHorrorBGM();
-  horrorBGM.gain.setTargetAtTime(1, audioCtx.currentTime, 2);
+  try {
+    // Fade MP3 BGM down
+    smoothVolume(bgmAudio, bgmAudio.volume, 0, 2000);
+    // Fade ambient pad down
+    if (calmPad) calmPad.gain.setTargetAtTime(0, audioCtx ? audioCtx.currentTime : 0, 3);
+    // Start heartbeat sequence
+    startHeartbeatSequence();
+    // Start horror drone
+    if (!audioCtx) return;
+    if (!horrorBGM) createHorrorBGM();
+    if (horrorBGM) horrorBGM.gain.setTargetAtTime(1, audioCtx.currentTime, 2);
+  } catch (e) {
+    console.warn('switchToHorrorBGM failed:', e.message);
+  }
 }
 
 // ---- Knocking sound ----
@@ -653,34 +665,40 @@ function playKnocking() {
 }
 
 function createHorrorBGM() {
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-  const gain = audioCtx.createGain();
-  gain.gain.value = 0;
-  gain.connect(bgmGain);
+  try {
+    if (!audioCtx) return;
+    if (!bgmGain) return;  // Audio not initialized yet
+    const now = audioCtx.currentTime;
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0;
+    gain.connect(bgmGain);
 
-  // Low drone with dissonant intervals
-  [41.2, 58.27, 77.78].forEach((freq, i) => {
-    const osc = audioCtx.createOscillator();
-    const lfo = audioCtx.createOscillator();
-    const lfoGain = audioCtx.createGain();
-    lfo.frequency.value = 0.1 + i * 0.15;
-    lfo.type = 'sawtooth';
-    lfoGain.gain.value = 0.5;
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    osc.type = 'sawtooth';
-    osc.frequency.value = freq;
-    const oscGain = audioCtx.createGain();
-    oscGain.gain.value = 0.08;
-    osc.connect(oscGain);
-    oscGain.connect(gain);
-    lfo.start(now);
-    osc.start(now);
-  });
+    // Low drone with dissonant intervals
+    [41.2, 58.27, 77.78].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = 0.1 + i * 0.15;
+      lfo.type = 'sawtooth';
+      lfoGain.gain.value = 0.5;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      const oscGain = audioCtx.createGain();
+      oscGain.gain.value = 0.08;
+      osc.connect(oscGain);
+      oscGain.connect(gain);
+      lfo.start(now);
+      osc.start(now);
+    });
 
-  gain.gain.setTargetAtTime(1, now, 3);
-  horrorBGM = gain;
+    gain.gain.setTargetAtTime(1, now, 3);
+    horrorBGM = gain;
+  } catch (e) {
+    console.warn('createHorrorBGM failed:', e.message);
+    horrorBGM = null;
+  }
 }
 
 // ==================== SCARE EVENTS ====================
@@ -699,14 +717,14 @@ async function triggerGhostFace() {
   const darkOverlay = document.getElementById('darkOverlay');
   const ambient = document.getElementById('ghostAmbient');
 
-  // Instant: black screen + horror BGM + ambient sound
-  darkOverlay.classList.add('flash');
-  switchToHorrorBGM();
-  ambient.currentTime = 0;
-  ambient.volume = 0.5;
-  ambient.play().catch(e => console.warn('Audio play failed:', e.message));
-
   try {
+    // Instant: black screen + horror BGM + ambient sound
+    darkOverlay.classList.add('flash');
+    switchToHorrorBGM();
+    ambient.currentTime = 0;
+    ambient.volume = 0.5;
+    ambient.play().catch(e => console.warn('Audio play failed:', e.message));
+
     // Setup
     ghostImg.style.opacity = '0';
     ghostImg.style.transition = 'none';
