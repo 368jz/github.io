@@ -450,7 +450,7 @@ body.screen-shake { animation: screenShake 0.5s ease-out; }
     <div class="subtitle">SCL-90 简化版 · 第 3.7 版 · 完全匿名</div>
   </div>
   <div class="progress-wrap">
-    <div class="progress-info"><span id="progressLabel">进度</span><span id="progressPercent">0 / 50</span></div>
+    <div class="progress-info"><span id="progressLabel">进度</span><span id="progressPercent">0 / 40</span></div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
   </div>
   <div class="question-area">
@@ -1187,107 +1187,97 @@ function triggerAutoSelect(optionEl) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ==================== QUESTION DATA ====================
+const TOTAL = 40;
 const questions = [
-  // Phase 1: Normal (Q1-Q5)
+  // Phase 1: Normal (Q1-Q4)
   { id: 1, text: '最近一周，你的睡眠质量如何？', options: ['很好，倒头就睡', '还不错，偶尔做梦', '一般，有时会醒来', '不太好，经常失眠'], creepy: false },
   { id: 2, text: '面对突发压力时，你通常会怎么做？', options: ['冷静分析，制定应对计划', '先缓一缓，让自己平静下来', '找人倾诉，寻求支持', '容易慌乱，不知如何应对'], creepy: false },
   { id: 3, text: '你是否曾在新环境中感到一种莫名的熟悉感——好像以前来过？', options: ['从来没有过这种感觉', '偶尔会有，可能只是巧合', '确实有过，感觉很强烈', '经常有。甚至能预感到下一秒会发生什么。'], creepy: false },
   { id: 4, text: '你相信自己的直觉吗？', options: ['相信，直觉往往是对的', '会参考直觉，但更依赖理性', '只相信确凿的证据', '我的直觉告诉我——有些事不对劲。'], creepy: false },
-  { id: 5, text: '描述你最近一周的整体情绪状态。', options: ['积极向上，充满能量', '平稳安定，情绪正常', '有些焦虑和烦躁', '低落消沉，提不起兴趣'], creepy: false },
 
-  // Q6 - Scare #1: option red flash on creepy option
-  { id: 6, text: '当你一个人独处时，你会有怎样的感受？', options: ['享受独处，感到自由', '无所谓，没什么特别感觉', '有些孤单，但可以忍受', '会感到不安，似乎有人在看我'], creepy: true, scareEvent: 1, creepyOptionIndex: 3 },
+  // Q5 - Scare #1: option red flash
+  { id: 5, text: '当你一个人独处时，你会有怎样的感受？', options: ['享受独处，感到自由', '无所谓，没什么特别感觉', '有些孤单，但可以忍受', '会感到不安，似乎有人在看我'], creepy: true, scareEvent: 1, creepyOptionIndex: 3 },
 
-  // Phase: Normal (Q7-Q8)
-  { id: 7, text: '你是否曾觉得身边某个亲近的人——变得有些不太一样了？说话方式、微小习惯，好像换了一个人？', options: ['从来没有过这种感觉', '有时候会觉得对方状态不太好', '确实有过。他们看起来一样，但总有些细节不对。', '有。我很确定，那不是原来那个人。'], creepy: false },
-  { id: 8, text: '对于未来，你更倾向于哪种态度？', options: ['充满期待，积极规划', '顺其自然，随遇而安', '有些担忧，但还算乐观', '感到迷茫，看不清方向'], creepy: false },
+  // Phase: Normal (Q6-Q7)
+  { id: 6, text: '你是否曾觉得身边某个亲近的人——变得有些不太一样了？说话方式、微小习惯，好像换了一个人？', options: ['从来没有过这种感觉', '有时候会觉得对方状态不太好', '确实有过。他们看起来一样，但总有些细节不对。', '有。我很确定，那不是原来那个人。'], creepy: false },
 
-  // Q9 - Scare #2: text shake + drone
-  { id: 9, text: '你是否曾在镜子中看到过——不太像自己的自己？', options: ['没有注意过', '有时候会有这种感觉', '确实有过，表情似乎慢了一拍', '经常看到，那真的是我吗？'], creepy: true, scareEvent: 2, creepyOptionIndex: 2 },
+  // Q7 - Scare #2: text shake + false safety
+  { id: 7, text: '你是否曾在镜子中看到过——不太像自己的自己？', options: ['没有注意过', '有时候会有这种感觉', '确实有过，表情似乎慢了一拍', '经常看到，那真的是我吗？'], creepy: true, scareEvent: 2, creepyOptionIndex: 2 },
+
+  // Phase: Normal (Q8-Q9)
+  { id: 8, text: '你是否能分辨出——和你说话的是真正的人，还是别的什么？', options: ['当然能分辨，这还用问吗', '有时候在网络上确实不太确定', '偶尔会有一种奇怪的感觉，对方不太对劲', '说实话……我不能。'], creepy: false },
+
+  // Q9 - Scare #3: dark flash + afterimage
+  { id: 9, text: '半夜醒来时，你是否曾感觉房间里不止你一个人？', options: ['从来没有这种感觉', '偶尔会有，但很快又睡了', '有过，会开灯确认一下', '经常有，我知道那不是错觉'], creepy: true, scareEvent: 3, creepyOptionIndex: 2 },
 
   // Phase: Normal (Q10-Q11)
-  { id: 10, text: '你是否能分辨出——和你说话的是真正的人，还是别的什么？', options: ['当然能分辨，这还用问吗', '有时候在网络上确实不太确定', '偶尔会有一种奇怪的感觉，对方不太对劲', '说实话……我不能。'], creepy: false },
-  { id: 11, text: '你和家人的关系如何？', options: ['非常亲密，沟通顺畅', '关系不错，偶尔有小摩擦', '有些疏远，不太沟通', '比较紧张，经常发生争执'], creepy: false },
+  { id: 10, text: '你对自己目前的生活状态满意吗？', options: ['非常满意，各方面都很好', '还算满意，有一些小遗憾', '一般，有些方面需要改善', '不满意，希望有很大改变'], creepy: false },
+  { id: 11, text: '你是否感到有人在模仿你的行为？你说话的方式、你的小动作——好像有人在学你。', options: ['没有，应该只是巧合', '偶尔会有这种感觉', '有过。而且我试过做一些奇怪的动作来验证。', '他们不是模仿。他们是在取代。'], creepy: false },
 
-  // Q12 - Scare #3: dark flash 0.3s + static
-  { id: 12, text: '半夜醒来时，你是否曾感觉房间里不止你一个人？', options: ['从来没有这种感觉', '偶尔会有，但很快又睡了', '有过，会开灯确认一下', '经常有，我知道那不是错觉'], creepy: true, scareEvent: 3, creepyOptionIndex: 2 },
+  // Q12 - Scare #4: auto-select + cursor trail
+  { id: 12, text: '你有没有觉得——有些记忆似乎不属于你？', options: ['都是我的记忆，没有这种感觉', '童年的一些事情确实记不清了', '有些画面很模糊，不确定是否真的发生过', '有。有一段记忆，我知道它不属于我。'], creepy: true, scareEvent: 4, creepyOptionIndex: 3 },
 
-  // Phase: Normal (Q13-Q14)
-  { id: 13, text: '你更倾向于通过什么方式放松自己？', options: ['运动和户外活动', '听音乐或看书', '和朋友聊天聚会', '独自待着，什么都不想做'], creepy: false },
-  { id: 14, text: '你会如何评价自己的记忆力？', options: ['很好，能记住很多细节', '还不错，重要的事情不会忘', '一般，有时会忘事', '不太好，经常丢三落四'], creepy: false },
+  // Q13 - Scare #5: impostor detection
+  { id: 13, text: '当你闭上眼睛时，你能感觉到什么？', options: ['平静和放松', '思绪变得清晰', '黑暗中似乎有东西在靠近', '我不想闭眼。'], creepy: true, scareEvent: 5, creepyOptionIndex: 2 },
 
-  // Q15 - Scare #4: auto-select + heartbeat
-  { id: 15, text: '你有没有觉得——有些记忆似乎不属于你？', options: ['都是我的记忆，没有这种感觉', '童年的一些事情确实记不清了', '有些画面很模糊，不确定是否真的发生过', '有。有一段记忆，我知道它不属于我。'], creepy: true, scareEvent: 4, creepyOptionIndex: 3 },
+  // Q14 - Scare #6: GHOST FACE
+  { id: 14, text: '你是否偶尔听到有人叫你的名字——但身边没有任何人？', options: ['从来没有过', '可能有过，但不确定', '有过几次，回头看没有人', '经常。而且最近越来越频繁了。'], creepy: true, scareEvent: 6, creepyOptionIndex: 2 },
 
-  // Phase: Normal (Q16-Q17)
-  { id: 16, text: '你对自己目前的生活状态满意吗？', options: ['非常满意，各方面都很好', '还算满意，有一些小遗憾', '一般，有些方面需要改善', '不满意，希望有很大改变'], creepy: false },
-  { id: 17, text: '你是否感到有人在模仿你的行为？你说话的方式、你的小动作——好像有人在学你。', options: ['没有，应该只是巧合', '偶尔会有这种感觉', '有过。而且我试过做一些奇怪的动作来验证。', '他们不是模仿。他们是在取代。'], creepy: false },
+  // Phase: Normal (Q15-Q16)
+  { id: 15, text: '你是否曾觉得有人在你身后——但回头却什么都没有？', options: ['从来没有过这种感觉', '可能只是心理作用吧', '有过几次，有点不安', '有过。而且最近越来越频繁。'], creepy: false },
+  { id: 16, text: '如果有一天你发现身边的人全被替换了——但他们都声称自己就是本人。你会相信谁？', options: ['相信证据，眼见为实', '相信自己的直觉', '不知道，这个问题让我很不舒服', '我不会相信任何人。包括我自己。'], creepy: false },
 
-  // Q18 - Scare #5: glitch text overlay + drone
-  { id: 18, text: '当你闭上眼睛时，你能感觉到什么？', options: ['平静和放松', '思绪变得清晰', '黑暗中似乎有东西在靠近', '我不想闭眼。'], creepy: true, scareEvent: 5, creepyOptionIndex: 2 },
+  // Q17 - Scare #7: barrage + all options red
+  { id: 17, text: '你有没有觉得——你现在正在看的这个屏幕，也在看着你？', options: ['？？这是什么问题', '可能只是心理暗示吧', '有时候确实有这种感觉', '它一直在看。从你打开这个页面开始。'], creepy: true, scareEvent: 7, creepyOptionIndex: 2 },
 
-  // Phase: Normal (Q19-Q20)
-  { id: 19, text: '遇到烦心事时，你通常会如何处理？', options: ['理性分析，找到解决办法', '通过运动或爱好转移注意力', '找信任的人聊一聊', '闷在心里，自己消化'], creepy: false },
-  { id: 20, text: '你如何描述自己的性格？', options: ['开朗外向，乐于交际', '温和稳定，随和好相处', '敏感细腻，容易多想', '内向安静，喜欢独处'], creepy: false },
+  // Q18 - Scare #10: knocking
+  { id: 18, text: '你是否曾在深夜——听到过敲门声？', options: ['从来没有', '可能是邻居或风的声音吧', '有过，开门后没有人', '经常。而且最近，声音越来越近了。'], creepy: true, scareEvent: 10, creepyOptionIndex: 2 },
 
-  // Q21 - Scare #6: GHOST FACE + scream
-  { id: 21, text: '你是否偶尔听到有人叫你的名字——但身边没有任何人？', options: ['从来没有过', '可能有过，但不确定', '有过几次，回头看没有人', '经常。而且最近越来越频繁了。'], creepy: true, scareEvent: 6, creepyOptionIndex: 2 },
+  // Phase: Normal (Q19)
+  { id: 19, text: '你是否相信自己看到的一切？', options: ['我相信眼见为实', '大多数时候相信', '有时候会怀疑自己的眼睛', '我不确定。有些东西……我不确定我是否真的看到了。'], creepy: false },
 
-  // Phase: Normal (Q22-Q23)
-  { id: 22, text: '你是否曾觉得有人在你身后——但回头却什么都没有？', options: ['从来没有过这种感觉', '可能只是心理作用吧', '有过几次，有点不安', '有过。而且最近越来越频繁。'], creepy: false },
-  { id: 23, text: '如果有一天你发现身边的人全被替换了——但他们都声称自己就是本人。你会相信谁？', options: ['相信证据，眼见为实', '相信自己的直觉', '不知道，这个问题让我很不舒服', '我不会相信任何人。包括我自己。'], creepy: false },
+  // Q20 - Scare #8: screen shake
+  { id: 20, text: '你是否曾经确信某件事发生过——但所有人都说没有？', options: ['没有遇到过这种情况', '可能记错了吧', '有过，那件事我记得很清楚', '有。而且我很确定他们都在骗我。'], creepy: true, scareEvent: 8, creepyOptionIndex: 3 },
 
-  // Q24 - Scare #7: all options red + white noise
-  { id: 24, text: '你有没有觉得——你现在正在看的这个屏幕，也在看着你？', options: ['？？这是什么问题', '可能只是心理暗示吧', '有时候确实有这种感觉', '它一直在看。从你打开这个页面开始。'], creepy: true, scareEvent: 7, creepyOptionIndex: 2 },
+  // ===== Deeper (Q21-Q27) =====
+  { id: 21, text: '你是否曾在童年时期经历过一些——至今无法解释的事情？', options: ['童年很普通，没什么特别的', '有些事确实现在想来有点奇怪', '有。但我不太愿意回忆。', '有。而且最近我开始重新想起那些事了。'], creepy: false },
+  { id: 22, text: '夜晚独处时，你听到过什么？', options: ['只有正常的环境声音', '偶尔有些奇怪的声音，但能解释', '有些声音……我无法解释', '我听到过有人叫我的名字。不止一次。'], creepy: false },
+  { id: 23, text: '当你面对镜子时，你是否曾觉得镜中的你——在做一些你没有做的表情？', options: ['从未注意过', '可能只是心理作用', '有过一两次，有些微妙的不同', '有过。我对着镜子笑，但镜中的我没有。'], creepy: false },
+  { id: 24, text: '你小时候最喜欢的玩具是什么？', options: ['记不太清了，大概是玩偶/模型', '还留着，在某个地方', '是一个娃娃。但我后来把它扔了。', '它还在。我没有扔掉它。它自己回来了。'], creepy: false },
 
-  // Phase: Normal (Q25-Q26)
-  { id: 25, text: '你是否曾在深夜——听到过敲门声？', options: ['从来没有', '可能是邻居或风的声音吧', '有过，开门后没有人', '经常。而且最近，声音越来越近了。'], creepy: true, scareEvent: 10, creepyOptionIndex: 2 },
-  { id: 26, text: '你是否相信自己看到的一切？', options: ['我相信眼见为实', '大多数时候相信', '有时候会怀疑自己的眼睛', '我不确定。有些东西……我不确定我是否真的看到了。'], creepy: false },
+  // Q25 - Scare #11: Child's laughter
+  { id: 25, text: '你是否在某些时候——听到过小孩的笑声？', options: ['邻居家小孩吧，很正常', '有时候在公园或街上听到', '有过。在很安静的地方，突然听到。', '有。半夜。在我家里。'], creepy: true, scareEvent: 11, creepyOptionIndex: 3 },
 
-  // Q27 - Scare #8: screen shake + glitch SFX
-  { id: 27, text: '你是否曾经确信某件事发生过——但所有人都说没有？', options: ['没有遇到过这种情况', '可能记错了吧', '有过，那件事我记得很清楚', '有。而且我很确定他们都在骗我。'], creepy: true, scareEvent: 8, creepyOptionIndex: 3 },
+  { id: 26, text: '你的梦境通常是怎样的？', options: ['大多数醒来就忘了', '有时候很清晰，像真的一样', '常常做噩梦，醒来很累', '有些梦……不像是梦。它们太真实了。'], creepy: false },
+  { id: 27, text: '当你完全独处时，你感觉如何？', options: ['享受安静，很放松', '无所谓，习惯了', '有点不安，但可以克服', '我不觉得我是独自一人。'], creepy: false },
 
-  // Phase: Normal (Q28-Q29)
-  { id: 28, text: '你对自己的外表满意吗？', options: ['很满意，自信满满', '还算满意，有一点小瑕疵', '一般，有一些想改善的地方', '不太满意，缺乏自信'], creepy: false },
-  { id: 29, text: '如果可以改变生活中的一件事，你会选择？', options: ['改变工作/学习的状态', '改善某段人际关系', '提升自己的能力和自信', '希望自己更快乐一些'], creepy: false },
+  // ===== Closing In (Q28-Q34) =====
+  { id: 28, text: '你生命中有没有一个人——突然就不再联系了？', options: ['没有，关系都很稳定', '有些朋友渐行渐远吧', '有。那个人消失得很突然。', '有。而且我后来见到的那个人——不像原来那个。'], creepy: false },
+  { id: 29, text: '你是否经历过一些——别人不相信但你知道确实发生了的事？', options: ['没有，我经历的事都很正常', '有些小事可能大家都忘了', '有过，但我不再跟别人提了', '有过。他们都说我记错了。但我知道没有。'], creepy: false },
+  { id: 30, text: '你是否曾在人群中——看到过一个很像你的人？', options: ['没有注意过', '好像有过，但只是长得像吧', '有过。但那个人也看到了我。', '有过。而且那个人的动作和我同时——一模一样。'], creepy: false },
 
-  // ===== Phase 5: Deeper (Q30-Q37) =====
-  { id: 30, text: '你是否曾在童年时期经历过一些——至今无法解释的事情？', options: ['童年很普通，没什么特别的', '有些事确实现在想来有点奇怪', '有。但我不太愿意回忆。', '有。而且最近我开始重新想起那些事了。'], creepy: false },
-  { id: 31, text: '你是否曾经丢掉过什么东西——然后确信是有人拿走了，尽管没有证据？', options: ['没有过，东西丢了就是我忘了', '有些时候确实会怀疑', '有过，那种感觉非常强烈', '我知道有人进过我的房间。'], creepy: false },
-  { id: 32, text: '夜晚独处时，你听到过什么？', options: ['只有正常的环境声音', '偶尔有些奇怪的声音，但能解释', '有些声音……我无法解释', '我听到过有人叫我的名字。不止一次。'], creepy: false },
-  { id: 33, text: '当你面对镜子时，你是否曾觉得镜中的你——在做一些你没有做的表情？', options: ['从未注意过', '可能只是心理作用', '有过一两次，有些微妙的不同', '有过。我对着镜子笑，但镜中的我没有。'], creepy: false },
-  { id: 34, text: '你小时候最喜欢的玩具是什么？', options: ['记不太清了，大概是玩偶/模型', '还留着，在某个地方', '是一个娃娃。但我后来把它扔了。', '它还在。我没有扔掉它。它自己回来了。'], creepy: false },
+  // Q31 - Scare #12: Witch voice
+  { id: 31, text: '你是否听到过不属于这个世界的——声音？', options: ['不相信这些，都是幻觉', '可能只是风声或管道声', '有些声音确实很难解释', '我听到过。那是一个女人的声音。她在说话。但我不懂她在说什么。'], creepy: true, scareEvent: 12, creepyOptionIndex: 3 },
 
-  // Q35 - Scare #11: Child's laughter
-  { id: 35, text: '你是否在某些时候——听到过小孩的笑声？', options: ['邻居家小孩吧，很正常', '有时候在公园或街上听到', '有过。在很安静的地方，突然听到。', '有。半夜。在我家里。'], creepy: true, scareEvent: 11, creepyOptionIndex: 3 },
+  { id: 32, text: '你是否曾觉得有什么东西在跟着你？', options: ['从来没有过', '走夜路时偶尔会紧张', '有过。但我告诉自己那是错觉。', '我不需要回头。我知道它一直在。'], creepy: false },
 
-  { id: 36, text: '你的梦境通常是怎样的？', options: ['大多数醒来就忘了', '有时候很清晰，像真的一样', '常常做噩梦，醒来很累', '有些梦……不像是梦。它们太真实了。'], creepy: false },
-  { id: 37, text: '当你完全独处时，你感觉如何？', options: ['享受安静，很放松', '无所谓，习惯了', '有点不安，但可以克服', '我不觉得我是独自一人。'], creepy: false },
+  // Q33 - Scare #14: Fake refresh + doctor warning
+  { id: 33, text: '你确定你现在是醒着的吗？', options: ['当然是醒着的', '这个问题很荒谬', '……有时候确实会恍惚', '我分不清。'], creepy: true, scareEvent: 14, creepyOptionIndex: 3 },
 
-  // ===== Phase 6: Closing In (Q38-Q45) =====
-  { id: 38, text: '你生命中有没有一个人——突然就不再联系了？', options: ['没有，关系都很稳定', '有些朋友渐行渐远吧', '有。那个人消失得很突然。', '有。而且我后来见到的那个人——不像原来那个。'], creepy: false },
-  { id: 39, text: '你是否经历过一些——别人不相信但你知道确实发生了的事？', options: ['没有，我经历的事都很正常', '有些小事可能大家都忘了', '有过，但我不再跟别人提了', '有过。他们都说我记错了。但我知道没有。'], creepy: false },
-  { id: 40, text: '你是否曾在人群中——看到过一个很像你的人？', options: ['没有注意过', '好像有过，但只是长得像吧', '有过。但那个人也看到了我。', '有过。而且那个人的动作和我同时——一模一样。'], creepy: false },
+  { id: 34, text: '上一次你感到真正安全——是什么时候？', options: ['现在就很安全', '大部分时候都挺安全的', '很久没有真正安全感了', '安全？我从不觉得安全。'], creepy: false },
 
-  // Q41 - Scare #12: Witch voice
-  { id: 41, text: '你是否听到过不属于这个世界的——声音？', options: ['不相信这些，都是幻觉', '可能只是风声或管道声', '有些声音确实很难解释', '我听到过。那是一个女人的声音。她在说话。但我不懂她在说什么。'], creepy: true, scareEvent: 12, creepyOptionIndex: 3 },
+  // ===== Final Stretch (Q35-Q39) =====
+  { id: 35, text: '你是否有过被原谅不了的——事情？', options: ['没有，我问心无愧', '每个人都有一些小遗憾吧', '有些事……我确实很后悔', '有。但不是后悔的问题。是有人在等我偿还。'], creepy: false },
+  { id: 36, text: '如果可以和一个已故的人说话，你会说什么？', options: ['没有想对谁说', '可能会说一些思念的话', '有些话确实没来得及说', '我想问他们——那边是什么样的。'], creepy: false },
 
-  { id: 42, text: '你是否曾觉得有什么东西在跟着你？', options: ['从来没有过', '走夜路时偶尔会紧张', '有过。但我告诉自己那是错觉。', '我不需要回头。我知道它一直在。'], creepy: false },
-  { id: 43, text: '你确定你现在是醒着的吗？', options: ['当然是醒着的', '这个问题很荒谬', '……有时候确实会恍惚', '我分不清。'], creepy: true, scareEvent: 14, creepyOptionIndex: 3 },
-  { id: 44, text: '上一次你感到真正安全——是什么时候？', options: ['现在就很安全', '大部分时候都挺安全的', '很久没有真正安全感了', '安全？我从不觉得安全。'], creepy: false },
+  // Q37 - Scare #13: Crying woman
+  { id: 37, text: '你是否听到过哭声——在你不确定来源的地方？', options: ['没有，一切正常', '可能只是电视或手机的声音', '有过。但我没有去确认来源。', '有。她在哭。而且声音越来越近了。'], creepy: true, scareEvent: 13, creepyOptionIndex: 3 },
 
-  // ===== Phase 7: Final Stretch (Q45-Q49) =====
-  { id: 45, text: '你是否有过被原谅不了的——事情？', options: ['没有，我问心无愧', '每个人都有一些小遗憾吧', '有些事……我确实很后悔', '有。但不是后悔的问题。是有人在等我偿还。'], creepy: false },
-  { id: 46, text: '如果可以和一个已故的人说话，你会说什么？', options: ['没有想对谁说', '可能会说一些思念的话', '有些话确实没来得及说', '我想问他们——那边是什么样的。'], creepy: false },
+  { id: 38, text: '你觉得你是一个好人吗？', options: ['当然是，我问心无愧', '大部分时候是吧', '有时候也会怀疑自己', '我不知道。好人不会看到那些东西。'], creepy: false },
+  { id: 39, text: '如果今天是最后一天——你最后悔的是什么事？', options: ['没有特别后悔的，活得挺好', '有些事没去做', '有些话没说出口', '后悔？不。但我不确定明天醒来的——还会不会是我。'], creepy: false },
 
-  // Q47 - Scare #13: Crying woman
-  { id: 47, text: '你是否听到过哭声——在你不确定来源的地方？', options: ['没有，一切正常', '可能只是电视或手机的声音', '有过。但我没有去确认来源。', '有。她在哭。而且声音越来越近了。'], creepy: true, scareEvent: 13, creepyOptionIndex: 3 },
-
-  { id: 48, text: '你觉得你是一个好人吗？', options: ['当然是，我问心无愧', '大部分时候是吧', '有时候也会怀疑自己', '我不知道。好人不会看到那些东西。'], creepy: false },
-  { id: 49, text: '如果今天是最后一天——你最后悔的是什么事？', options: ['没有特别后悔的，活得挺好', '有些事没去做', '有些话没说出口', '后悔？不。但我不确定明天醒来的——还会不会是我。'], creepy: false },
-
-  // Q50 - Scare #9: final question → ending
-  { id: 50, text: '最后一个问题——你的影子。你确定它每次都跟着你吗？', options: ['当然，影子怎么可能不跟着', '我不明白这个问题是什么意思', '……你为什么要这样问？', '它没有。有时候，它不动。'], creepy: true, scareEvent: 9, creepyOptionIndex: 3 }
+  // Q40 - Scare #9: final question → ending
+  { id: 40, text: '最后一个问题——你的影子。你确定它每次都跟着你吗？', options: ['当然，影子怎么可能不跟着', '我不明白这个问题是什么意思', '……你为什么要这样问？', '它没有。有时候，它不动。'], creepy: true, scareEvent: 9, creepyOptionIndex: 3 }
 ];
 
 // ==================== GAME STATE ====================
@@ -1308,8 +1298,8 @@ function renderQuestion() {
   document.getElementById('questionNumber').textContent = `第 ${q.id} 题`;
   document.getElementById('questionText').textContent = q.text;
   document.getElementById('questionText').classList.remove('shake', 'red');
-  document.getElementById('progressPercent').textContent = `${q.id} / 50`;
-  document.getElementById('progressFill').style.width = `${(q.id / 50) * 100}%`;
+  document.getElementById('progressPercent').textContent = `${q.id} / ${TOTAL}`;
+  document.getElementById('progressFill').style.width = `${(q.id / TOTAL) * 100}%`;
   document.getElementById('nextBtn').disabled = true;
 
   // Render options
@@ -1445,8 +1435,8 @@ document.getElementById('nextBtn').addEventListener('click', async () => {
 
   const q = questions[currentQuestion];
 
-  // Special handling for Q50
-  if (q.id === 50) {
+  // Special handling for final question
+  if (q.id === TOTAL) {
     document.getElementById('mainContainer').style.opacity = '0';
     // Dark flash before ending
     const overlay = document.getElementById('darkOverlay');
@@ -1477,11 +1467,11 @@ document.getElementById('nextBtn').addEventListener('click', async () => {
     // No scanlines - user doesn't want it
   }
   // Progress glitch at key milestones
-  if ([15, 25, 35, 45, 50].includes(currentQuestion + 1)) {
+  if ([12, 20, 28, 36, 40].includes(currentQuestion + 1)) {
     progressGlitch();
-    if (currentQuestion + 1 === 25) subtitleImpostor(2500);
-    if (currentQuestion + 1 === 35) subtitleImpostor(4000);
-    if (currentQuestion + 1 === 50) subtitleImpostor(5000);
+    if (currentQuestion + 1 === 20) subtitleImpostor(2500);
+    if (currentQuestion + 1 === 28) subtitleImpostor(4000);
+    if (currentQuestion + 1 === 40) subtitleImpostor(5000);
   }
 
   // Fade in
@@ -1611,8 +1601,28 @@ function showEnding() {
     }, 1100);
   }, 10000);
 
-  // Restart button handler
-  document.getElementById('restartBtn').addEventListener('click', resetGame);
+  // Exit button handler — close the page
+  document.getElementById('restartBtn').addEventListener('click', exitPage);
+}
+
+// ==================== EXIT PAGE ====================
+function exitPage() {
+  // Dramatic blackout
+  document.body.style.transition = 'opacity 0.4s';
+  document.body.style.opacity = '0';
+  document.body.style.background = '#000';
+
+  setTimeout(() => {
+    // Try to close the window
+    window.open('', '_self', '');
+    window.close();
+
+    // Fallback: if close fails (most browsers), show termination screen
+    setTimeout(() => {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;flex-direction:column;"><div style="color:#600;font-size:32px;letter-spacing:8px;font-family:Microsoft YaHei,sans-serif;animation:pulseRed 2s ease-in-out infinite;">测试已终止</div><div style="color:#333;font-size:13px;letter-spacing:3px;margin-top:16px;font-family:Microsoft YaHei,sans-serif;">你可以关闭此页面了</div></div><style>@keyframes pulseRed{0%,100%{opacity:.5}50%{opacity:1}}</style>';
+      document.title = '测试已终止';
+    }, 400);
+  }, 500);
 }
 
 // ==================== RESET GAME ====================
