@@ -444,6 +444,10 @@ let heartbeatTimer = null;
 function initAudio() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Resume if suspended (required by modern browsers)
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(e => console.warn('AudioContext resume failed:', e));
+  }
   bgmGain = audioCtx.createGain();
   bgmGain.gain.value = 0.08;
   bgmGain.connect(audioCtx.destination);
@@ -456,7 +460,7 @@ function startHeartbeatSequence() {
 
   // Fade in normal heartbeat
   hbNormal.currentTime = 0;
-  hbNormal.play().catch(() => {});
+  hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
   smoothVolume(hbNormal, 0, 0.35, 2000);
 
   // → fast after 5s
@@ -484,7 +488,7 @@ function stopHeartbeatSequence() {
 
 function crossfadeHeartbeats(fromEl, toEl, targetVol) {
   toEl.currentTime = 0;
-  toEl.play().catch(() => {});
+  toEl.play().catch(e => console.warn('Audio play failed:', e.message));
   smoothVolume(fromEl, fromEl.volume, 0, 1500);
   smoothVolume(toEl, 0, targetVol, 1500);
 }
@@ -523,7 +527,7 @@ function switchToHorrorBGM() {
 // ---- Knocking sound ----
 function playKnocking() {
   knockingSfx.currentTime = 0;
-  knockingSfx.play().catch(() => {});
+  knockingSfx.play().catch(e => console.warn('Audio play failed:', e.message));
 }
 
 function createHorrorBGM() {
@@ -575,7 +579,7 @@ async function triggerGhostFace() {
   switchToHorrorBGM();
   ambient.currentTime = 0;
   ambient.volume = 0.5;
-  ambient.play().catch(() => {});
+  ambient.play().catch(e => console.warn('Audio play failed:', e.message));
 
   // Setup
   ghostImg.style.opacity = '0';
@@ -874,7 +878,7 @@ async function triggerChildLaugh() {
   // Sudden burst of creepy child laughter
   laughChild.currentTime = 0;
   laughChild.volume = 0.6;
-  laughChild.play().catch(() => {});
+  laughChild.play().catch(e => console.warn('Audio play failed:', e.message));
 
   // Screen flicker with brief red tint
   const overlay = document.getElementById('darkOverlay');
@@ -887,7 +891,7 @@ async function triggerChildLaugh() {
   await sleep(200);
   // Second burst
   laughChild.currentTime = 0;
-  laughChild.play().catch(() => {});
+  laughChild.play().catch(e => console.warn('Audio play failed:', e.message));
 
   await sleep(800);
   switchToNormalBGM();
@@ -906,7 +910,7 @@ async function triggerWitchVoice() {
   // Play witch voice
   voiceWitch.currentTime = 0;
   voiceWitch.volume = 0.5;
-  voiceWitch.play().catch(() => {});
+  voiceWitch.play().catch(e => console.warn('Audio play failed:', e.message));
 
   // Glitch text appears
   triggerGlitchText('它 在 说 话');
@@ -936,7 +940,7 @@ async function triggerCryingWoman() {
   // Slowly fade in crying
   cryWoman.currentTime = 0;
   cryWoman.volume = 0;
-  cryWoman.play().catch(() => {});
+  cryWoman.play().catch(e => console.warn('Audio play failed:', e.message));
   smoothVolume(cryWoman, 0, 0.45, 3000);
 
   // Screen gradually darkens
@@ -1406,7 +1410,7 @@ function showEnding() {
   setTimeout(() => {
     hbNormal.currentTime = 0;
     hbNormal.volume = 0.15;
-    hbNormal.play().catch(() => {});
+    hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
   }, 6000);
 
   // Escalate to fast heartbeat
@@ -1415,7 +1419,7 @@ function showEnding() {
     setTimeout(() => {
       hbFast.currentTime = 0;
       hbFast.volume = 0.2;
-      hbFast.play().catch(() => {});
+      hbFast.play().catch(e => console.warn('Audio play failed:', e.message));
     }, 1100);
   }, 10000);
 
@@ -1488,7 +1492,7 @@ function init() {
   // Start audio on first user interaction
   document.addEventListener('click', () => {
     initAudio();
-    bgmAudio.play().catch(() => {});
+    bgmAudio.play().catch(e => console.warn('BGM play failed:', e.message));
     switchToNormalBGM();
   }, { once: true });
 }
