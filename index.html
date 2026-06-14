@@ -429,7 +429,7 @@ const knockingSfx  = document.getElementById('knockingAudio');
 	const voiceWitch   = document.getElementById('voiceWitch');
 	const cryWoman     = document.getElementById('cryWoman');
 
-bgmAudio.volume = 0.35;
+bgmAudio.volume = 0; // MP3 is fallback; primary BGM is Web Audio generated
 hbNormal.volume = 0;
 hbFast.volume = 0;
 hbVeryFast.volume = 0;
@@ -505,20 +505,86 @@ function smoothVolume(el, from, to, durationMs) {
 }
 
 // ---- BGM switching ----
+let calmBGM = null;
+
+function createCalmBGM() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(audioCtx.destination);
+
+  // Soft pad chords (major 7th intervals - calm, slightly melancholic)
+  const chords = [
+    [130.81, 164.81, 196.00, 246.94], // Cmaj7
+    [146.83, 185.00, 220.00, 277.18], // Dm7
+    [164.81, 207.65, 246.94, 311.13], // Em7
+    [174.61, 220.00, 261.63, 329.63], // Fmaj7
+  ];
+
+  let chordIndex = 0;
+  const chordDuration = 8; // seconds per chord
+
+  function playChord() {
+    const chord = chords[chordIndex % chords.length];
+    chord.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+
+      // Gentle LFO for warmth
+      lfo.frequency.value = 0.15 + i * 0.08;
+      lfo.type = 'sine';
+      lfoGain.gain.value = 1.5;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+
+      osc.type = i === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = freq;
+      oscGain.gain.setValueAtTime(0, now + i * 0.3);
+      oscGain.gain.linearRampToValueAtTime(0.04, now + i * 0.3 + 1.5);
+      oscGain.gain.setTargetAtTime(0.03, now + chordDuration * 0.8, 0.5);
+
+      osc.connect(oscGain);
+      oscGain.connect(masterGain);
+      lfo.start(now);
+      osc.start(now);
+      osc.stop(now + chordDuration + 0.5);
+    });
+    chordIndex++;
+    if (chordIndex < 100) {
+      setTimeout(playChord, chordDuration * 1000);
+    }
+  }
+
+  playChord();
+  calmBGM = masterGain;
+}
+
 function switchToNormalBGM() {
+  // Fade out horror BGM
   if (horrorBGM) horrorBGM.gain.setTargetAtTime(0, audioCtx ? audioCtx.currentTime : 0, 0.8);
   stopHeartbeatSequence();
-  smoothVolume(bgmAudio, bgmAudio.volume, 0.35, 2000);
+
+  // Fade in calm BGM
+  if (!calmBGM && audioCtx) createCalmBGM();
+  if (calmBGM) calmBGM.gain.setTargetAtTime(0.12, audioCtx.currentTime, 2);
+
+  // Also keep the MP3 BGM as fallback (if loaded)
+  if (bgmAudio.readyState >= 2) {
+    smoothVolume(bgmAudio, bgmAudio.volume, 0.15, 2000);
+  }
 }
 
 function switchToHorrorBGM() {
-  // Fade normal music down
-  smoothVolume(bgmAudio, bgmAudio.volume, 0.02, 3000);
-
+  // Fade calm BGM down
+  if (calmBGM) calmBGM.gain.setTargetAtTime(0, audioCtx ? audioCtx.currentTime : 0, 3);
+  // Fade MP3 BGM down
+  smoothVolume(bgmAudio, bgmAudio.volume, 0, 2000);
   // Start heartbeat sequence
   startHeartbeatSequence();
-
-  // Start horror drone (Web Audio)
+  // Start horror drone
   if (!audioCtx) return;
   if (!horrorBGM) createHorrorBGM();
   horrorBGM.gain.setTargetAtTime(1, audioCtx.currentTime, 2);
@@ -1470,6 +1536,7 @@ function resetGame() {
 
   // Stop all audio and reset
   stopHeartbeatSequence();
+  calmBGM = null; // Will be recreated on next switchToNormalBGM
   switchToNormalBGM();
   bgmAudio.currentTime = 0;
   document.title = originalTitle;
@@ -1490,52 +1557,11 @@ function resetGame() {
 function init() {
   renderQuestion();
   // Start audio on first user interaction
-  let audioStarted = false;
   document.addEventListener('click', async () => {
-    if (audioStarted) return;
-    audioStarted = true;
     initAudio();
-
-    const statusEl = document.getElementById('progressLabel');
-    const origLabel = statusEl.textContent;
-
-    // Helper to wait for audio ready
-    const waitForReady = (audio, timeoutMs = 15000) => new Promise((resolve) => {
-      if (audio.readyState >= 3) { resolve(true); return; }
-      const timer = setTimeout(() => resolve(false), timeoutMs);
-      audio.addEventListener('canplaythrough', () => {
-        clearTimeout(timer);
-        resolve(true);
-      }, { once: true });
-      audio.addEventListener('error', () => {
-        clearTimeout(timer);
-        resolve(false);
-      }, { once: true });
-      // Kick off loading if not already started
-      if (audio.readyState === 0) audio.load();
-    });
-
-    // Wait for BGM to be ready, then play
-    statusEl.textContent = '加载中...';
-    const ready = await waitForReady(bgmAudio, 20000);
-    if (ready) {
-      try {
-        await bgmAudio.play();
-        console.log('BGM started');
-      } catch (e) {
-        console.warn('BGM play failed:', e.message);
-      }
-    } else {
-      // Fallback: try programmatic audio
-      console.warn('BGM preload timeout, trying fallback');
-      statusEl.textContent = '重试中...';
-      const fb = new Audio(bgmAudio.src);
-      fb.loop = true;
-      fb.volume = 0.35;
-      try { await fb.play(); console.log('Fallback BGM OK'); } catch (e) {}
-    }
-    statusEl.textContent = origLabel;
+    // Calm BGM is generated via Web Audio — no file download needed
     switchToNormalBGM();
+    console.log('Audio started (Web Audio API generated BGM)');
   }, { once: true });
 }
 
