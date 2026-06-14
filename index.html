@@ -1489,7 +1489,7 @@ function resetGame() {
 // ==================== INITIALIZE ====================
 function init() {
   renderQuestion();
-  // Start audio on first user interaction with retry logic
+  // Start audio on first user interaction
   let audioStarted = false;
   document.addEventListener('click', async () => {
     if (audioStarted) return;
@@ -1499,45 +1499,42 @@ function init() {
     const statusEl = document.getElementById('progressLabel');
     const origLabel = statusEl.textContent;
 
-    // First test with a tiny audio file to confirm audio pipeline works
-    try {
-      await knockingSfx.play();
-      knockingSfx.pause();
-      knockingSfx.currentTime = 0;
-      console.log('Audio pipeline OK (knocking test passed)');
-    } catch (e) {
-      console.error('Audio pipeline BLOCKED:', e.message);
-      statusEl.textContent = '⚠ 音频被阻止';
-      return;
-    }
+    // Helper to wait for audio ready
+    const waitForReady = (audio, timeoutMs = 15000) => new Promise((resolve) => {
+      if (audio.readyState >= 3) { resolve(true); return; }
+      const timer = setTimeout(() => resolve(false), timeoutMs);
+      audio.addEventListener('canplaythrough', () => {
+        clearTimeout(timer);
+        resolve(true);
+      }, { once: true });
+      audio.addEventListener('error', () => {
+        clearTimeout(timer);
+        resolve(false);
+      }, { once: true });
+      // Kick off loading if not already started
+      if (audio.readyState === 0) audio.load();
+    });
 
-    // Try to play BGM with retry (large file may need time to buffer on CDN)
-    let played = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
+    // Wait for BGM to be ready, then play
+    statusEl.textContent = '加载中...';
+    const ready = await waitForReady(bgmAudio, 20000);
+    if (ready) {
       try {
         await bgmAudio.play();
-        played = true;
-        console.log('BGM started on attempt ' + (attempt + 1));
-        break;
+        console.log('BGM started');
       } catch (e) {
-        console.warn('BGM attempt ' + (attempt + 1) + ' failed:', e.message);
-        if (attempt < 9) await sleep(800);
+        console.warn('BGM play failed:', e.message);
       }
+    } else {
+      // Fallback: try programmatic audio
+      console.warn('BGM preload timeout, trying fallback');
+      statusEl.textContent = '重试中...';
+      const fb = new Audio(bgmAudio.src);
+      fb.loop = true;
+      fb.volume = 0.35;
+      try { await fb.play(); console.log('Fallback BGM OK'); } catch (e) {}
     }
-    if (!played) {
-      console.error('BGM failed after 10 attempts, trying programmatic fallback');
-      // Fallback: create audio element programmatically
-      const fallbackAudio = new Audio('audio/bgm-normal.mp3');
-      fallbackAudio.loop = true;
-      fallbackAudio.volume = 0.35;
-      try {
-        await fallbackAudio.play();
-        console.log('Programmatic BGM fallback succeeded');
-      } catch (e2) {
-        console.error('All audio attempts failed:', e2.message);
-        statusEl.textContent = origLabel;
-      }
-    }
+    statusEl.textContent = origLabel;
     switchToNormalBGM();
   }, { once: true });
 }
