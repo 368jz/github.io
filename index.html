@@ -359,6 +359,54 @@ body.screen-shake { animation: screenShake 0.5s ease-out; }
 
 /* Subtitle glitch */
 .subtitle-impostor { color: #c00 !important; letter-spacing: 1px; transition: color 0.1s, letter-spacing 0.1s; }
+
+/* ========== FAKE REFRESH OVERLAY ========== */
+.fake-refresh-overlay {
+  position: fixed; inset: 0; z-index: 10010; pointer-events: all;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; background: #0a0a0a; transition: opacity 0.6s;
+}
+.fake-refresh-overlay.active { opacity: 1; }
+.fake-refresh-white {
+  position: fixed; inset: 0; z-index: 10009; pointer-events: none;
+  background: #fff; opacity: 0; transition: opacity 0.08s;
+}
+.fake-refresh-content { text-align: center; }
+.fake-refresh-warning {
+  font-size: 28px; color: #cc0000; font-weight: bold;
+  letter-spacing: 6px; margin-bottom: 16px;
+  animation: warningPulse 0.6s ease-in-out infinite;
+  text-shadow: 0 0 20px rgba(200,0,0,0.6);
+}
+@keyframes warningPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.fake-refresh-sub {
+  font-size: 15px; color: #888; letter-spacing: 3px; margin-bottom: 28px;
+}
+.fake-refresh-img {
+  max-width: 200px; max-height: 200px; border-radius: 4px;
+  filter: grayscale(0.3) brightness(0.7);
+  opacity: 0; transition: opacity 1.5s;
+  box-shadow: 0 0 40px rgba(180,0,0,0.3);
+}
+.fake-refresh-img.show { opacity: 0.85; }
+.fake-refresh-footer {
+  font-size: 12px; color: #600; letter-spacing: 4px; margin-top: 32px;
+  animation: footerBlink 1.5s ease-in-out infinite;
+}
+@keyframes footerBlink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.fake-refresh-blink {
+  animation: refreshBlink 0.15s ease 2;
+}
+@keyframes refreshBlink {
+  0%, 100% { background: #0a0a0a; }
+  50% { background: #fff; }
+}
 </style>
 </head>
 <body>
@@ -384,6 +432,15 @@ body.screen-shake { animation: screenShake 0.5s ease-out; }
   <div class="impostor-label" id="impostorLabel">身份验证中</div>
   <div class="impostor-bar-wrap"><div class="impostor-bar" id="impostorBar"></div></div>
   <div class="impostor-fail" id="impostorFail">验证失败</div>
+</div>
+<div class="fake-refresh-white" id="fakeRefreshWhite"></div>
+<div class="fake-refresh-overlay" id="fakeRefreshOverlay">
+  <div class="fake-refresh-content">
+    <div class="fake-refresh-warning">⚠ 测试无法终止</div>
+    <div class="fake-refresh-sub">你已经回不去了</div>
+    <img class="fake-refresh-img" id="fakeRefreshImg" src="images/creepy-doctor.png" alt="">
+    <div class="fake-refresh-footer">该页面不允许刷新 · 请继续完成测试</div>
+  </div>
 </div>
 
 <div class="container" id="mainContainer">
@@ -934,6 +991,65 @@ async function triggerImpostorCheck() {
   switchToNormalBGM();
 }
 
+// ---- Scare #14: Fake page refresh + doctor image warning ----
+async function triggerFakeRefresh() {
+  switchToHorrorBGM();
+  setCreepyTitle('刷新失败');
+
+  const whiteFlash = document.getElementById('fakeRefreshWhite');
+  const overlay = document.getElementById('fakeRefreshOverlay');
+  const img = document.getElementById('fakeRefreshImg');
+  const mainContainer = document.getElementById('mainContainer');
+
+  // Phase 1: Blink the screen white (simulating a refresh attempt)
+  whiteFlash.style.opacity = '1';
+  document.body.classList.add('fake-refresh-blink');
+  await sleep(150);
+  document.body.classList.remove('fake-refresh-blink');
+  whiteFlash.style.opacity = '0';
+
+  // Phase 2: Short pause, user thinks page is refreshing
+  await sleep(400);
+
+  // Phase 3: Dark overlay appears with warning
+  mainContainer.style.opacity = '0';
+  await sleep(200);
+
+  // Hide main content, show fake refresh warning
+  mainContainer.style.display = 'none';
+  overlay.classList.add('active');
+  document.title = '⚠ 测试无法终止';
+
+  // Fade in doctor image slowly
+  await sleep(600);
+  img.classList.add('show');
+  await sleep(800);
+
+  // Play heartbeat for tension
+  hbNormal.currentTime = 0;
+  hbNormal.volume = 0.15;
+  hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
+
+  // Hold the warning for effect
+  await sleep(3500);
+
+  // Phase 4: Warning fades, test resumes
+  overlay.classList.remove('active');
+  img.classList.remove('show');
+  document.title = originalTitle;
+
+  // Fade out heartbeat
+  smoothVolume(hbNormal, 0.15, 0, 1000);
+  setTimeout(() => { hbNormal.pause(); hbNormal.currentTime = 0; }, 1100);
+
+  await sleep(800);
+
+  // Restore main content
+  mainContainer.style.display = '';
+  mainContainer.style.opacity = '1';
+  switchToNormalBGM();
+}
+
 // ---- Scare #11: Child's laughter ----
 async function triggerChildLaugh() {
   switchToHorrorBGM();
@@ -1157,7 +1273,7 @@ const questions = [
   { id: 41, text: '你是否听到过不属于这个世界的——声音？', options: ['不相信这些，都是幻觉', '可能只是风声或管道声', '有些声音确实很难解释', '我听到过。那是一个女人的声音。她在说话。但我不懂她在说什么。'], creepy: true, scareEvent: 12, creepyOptionIndex: 3 },
 
   { id: 42, text: '你是否曾觉得有什么东西在跟着你？', options: ['从来没有过', '走夜路时偶尔会紧张', '有过。但我告诉自己那是错觉。', '我不需要回头。我知道它一直在。'], creepy: false },
-  { id: 43, text: '你确定你现在是醒着的吗？', options: ['当然是醒着的', '这个问题很荒谬', '……有时候确实会恍惚', '我分不清。'], creepy: false },
+  { id: 43, text: '你确定你现在是醒着的吗？', options: ['当然是醒着的', '这个问题很荒谬', '……有时候确实会恍惚', '我分不清。'], creepy: true, scareEvent: 14, creepyOptionIndex: 3 },
   { id: 44, text: '上一次你感到真正安全——是什么时候？', options: ['现在就很安全', '大部分时候都挺安全的', '很久没有真正安全感了', '安全？我从不觉得安全。'], creepy: false },
 
   // ===== Phase 7: Final Stretch (Q45-Q49) =====
@@ -1314,6 +1430,9 @@ async function triggerScareEvent(q, el, index) {
     case 13: // Crying woman
       await triggerCryingWoman();
       break;
+    case 14: // Fake refresh + doctor warning
+      await triggerFakeRefresh();
+      break;
   }
   } finally {
     scareLocked = false;
@@ -1410,6 +1529,11 @@ function showEnding() {
   impostorBar.style.width = '0%';
   document.getElementById('impostorLabel').textContent = '';
   document.getElementById('impostorFail').classList.remove('show');
+
+  // Clean fake refresh overlay
+  document.getElementById('fakeRefreshOverlay').classList.remove('active');
+  document.getElementById('fakeRefreshWhite').style.opacity = '0';
+  document.getElementById('fakeRefreshImg').classList.remove('show');
 
   // Stop all audio
   deactivateCrawler();
@@ -1531,6 +1655,11 @@ function resetGame() {
   document.getElementById('impostorBar').classList.remove('glitch-bar');
   document.getElementById('impostorBar').style.width = '0%';
   document.getElementById('impostorFail').classList.remove('show');
+
+  // Clean fake refresh overlay
+  document.getElementById('fakeRefreshOverlay').classList.remove('active');
+  document.getElementById('fakeRefreshWhite').style.opacity = '0';
+  document.getElementById('fakeRefreshImg').classList.remove('show');
 
   // Stop all audio and reset
   stopHeartbeatSequence();
