@@ -1489,10 +1489,23 @@ function resetGame() {
 // ==================== INITIALIZE ====================
 function init() {
   renderQuestion();
-  // Start audio on first user interaction
-  document.addEventListener('click', () => {
+  // Start audio on first user interaction with retry logic
+  let audioStarted = false;
+  document.addEventListener('click', async () => {
+    if (audioStarted) return;
+    audioStarted = true;
     initAudio();
-    bgmAudio.play().catch(e => console.warn('BGM play failed:', e.message));
+
+    // Try to play BGM with retry (large file may need time to buffer on CDN)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await bgmAudio.play();
+        break; // Success
+      } catch (e) {
+        console.warn('BGM play attempt ' + (attempt + 1) + ' failed:', e.message);
+        if (attempt < 4) await sleep(800); // Wait for buffering, retry
+      }
+    }
     switchToNormalBGM();
   }, { once: true });
 }
