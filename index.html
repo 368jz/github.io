@@ -166,6 +166,25 @@ body.afterimage { filter: invert(0.85) hue-rotate(180deg); transition: filter 0.
   width: 100%; height: 100%; object-fit: cover;
 }
 
+/* ========== LOOK AWAY WARNING ========== */
+.lookaway-overlay {
+  position: fixed; inset: 0; z-index: 10003; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; visibility: hidden; transition: opacity 0.15s;
+  background: rgba(0,0,0,0.85);
+}
+.lookaway-overlay.show { opacity: 1; visibility: visible; }
+.lookaway-text {
+  font-size: 48px; font-weight: bold; color: #cc0000;
+  letter-spacing: 12px; font-family: "Microsoft YaHei", sans-serif;
+  text-shadow: 0 0 20px rgba(200,0,0,0.8), 0 0 60px rgba(200,0,0,0.5);
+  animation: lookawayPulse 0.4s ease-in-out infinite;
+}
+@keyframes lookawayPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
 /* ========== GLITCH TEXT OVERLAY ========== */
 .glitch-overlay {
   position: fixed; inset: 0; z-index: 10002; pointer-events: none;
@@ -424,6 +443,7 @@ body.screen-shake { animation: screenShake 0.5s ease-out; }
 <audio id="voiceWitch" src="audio/voice-witch.mp3" preload="auto"></audio>
 <audio id="cryWoman" src="audio/cry-woman.mp3" preload="auto"></audio>
 <img id="ghostImg" src="images/ghost-face.jpg" alt="">
+<div class="lookaway-overlay" id="lookawayOverlay"><div class="lookaway-text">回头别看</div></div>
 <div class="glitch-overlay" id="glitchOverlay"><div class="glitch-text" id="glitchText"></div></div>
 <div class="barrage-overlay" id="barrageOverlay"></div>
 <div class="safety-overlay" id="safetyOverlay"><div class="safety-msg" id="safetyMsg">系统正常</div></div>
@@ -716,21 +736,26 @@ async function triggerGhostFace() {
   const ghostImg = document.getElementById('ghostImg');
   const darkOverlay = document.getElementById('darkOverlay');
   const ambient = document.getElementById('ghostAmbient');
+  const lookaway = document.getElementById('lookawayOverlay');
 
   try {
-    // Instant: black screen + horror BGM + ambient sound
+    // Phase 1: Black screen + horror BGM + ambient sound
     darkOverlay.classList.add('flash');
     switchToHorrorBGM();
     ambient.currentTime = 0;
     ambient.volume = 0.5;
     ambient.play().catch(e => console.warn('Audio play failed:', e.message));
 
-    // Setup
+    // Phase 2: Red warning "回头别看"
+    lookaway.classList.add('show');
+    await sleep(600);
+    lookaway.classList.remove('show');
+    await sleep(200);
+
+    // Phase 3: Ghost face fade in
     ghostImg.style.opacity = '0';
     ghostImg.style.transition = 'none';
     await sleep(30);
-
-    // Fade in: 0.5s
     ghostImg.style.transition = 'opacity 0.5s ease-in';
     ghostImg.style.opacity = '0.95';
     await sleep(500);
@@ -746,6 +771,7 @@ async function triggerGhostFace() {
     // Cleanup — MUST always run even if audio/animation fails
     darkOverlay.classList.remove('flash');
     ghostImg.style.opacity = '0';
+    lookaway.classList.remove('show');
     switchToNormalBGM();
     ambient.pause();
     ambient.currentTime = 0;
