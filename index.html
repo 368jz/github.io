@@ -1496,14 +1496,46 @@ function init() {
     audioStarted = true;
     initAudio();
 
+    const statusEl = document.getElementById('progressLabel');
+    const origLabel = statusEl.textContent;
+
+    // First test with a tiny audio file to confirm audio pipeline works
+    try {
+      await knockingSfx.play();
+      knockingSfx.pause();
+      knockingSfx.currentTime = 0;
+      console.log('Audio pipeline OK (knocking test passed)');
+    } catch (e) {
+      console.error('Audio pipeline BLOCKED:', e.message);
+      statusEl.textContent = '⚠ 音频被阻止';
+      return;
+    }
+
     // Try to play BGM with retry (large file may need time to buffer on CDN)
-    for (let attempt = 0; attempt < 5; attempt++) {
+    let played = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
       try {
         await bgmAudio.play();
-        break; // Success
+        played = true;
+        console.log('BGM started on attempt ' + (attempt + 1));
+        break;
       } catch (e) {
-        console.warn('BGM play attempt ' + (attempt + 1) + ' failed:', e.message);
-        if (attempt < 4) await sleep(800); // Wait for buffering, retry
+        console.warn('BGM attempt ' + (attempt + 1) + ' failed:', e.message);
+        if (attempt < 9) await sleep(800);
+      }
+    }
+    if (!played) {
+      console.error('BGM failed after 10 attempts, trying programmatic fallback');
+      // Fallback: create audio element programmatically
+      const fallbackAudio = new Audio('audio/bgm-normal.mp3');
+      fallbackAudio.loop = true;
+      fallbackAudio.volume = 0.35;
+      try {
+        await fallbackAudio.play();
+        console.log('Programmatic BGM fallback succeeded');
+      } catch (e2) {
+        console.error('All audio attempts failed:', e2.message);
+        statusEl.textContent = origLabel;
       }
     }
     switchToNormalBGM();
