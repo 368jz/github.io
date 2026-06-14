@@ -34,7 +34,7 @@ body.afterimage { filter: invert(0.85) hue-rotate(180deg); transition: filter 0.
 .safety-overlay {
   position: fixed; inset: 0; z-index: 10004; pointer-events: none;
   display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.2s;
+  opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
 }
 .safety-msg {
   font-size: 14px; color: #4a8; letter-spacing: 2px;
@@ -325,10 +325,10 @@ body.screen-shake { animation: screenShake 0.5s ease-out; }
 .impostor-overlay {
   position: fixed; inset: 0; z-index: 10005; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.3s;
+  opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
   background: rgba(0,0,0,0.85);
 }
-.impostor-overlay.active { opacity: 1; }
+.impostor-overlay.active { opacity: 1; visibility: visible; }
 .impostor-label {
   font-size: 16px; color: #4a8; letter-spacing: 4px;
   font-family: "Courier New", monospace;
@@ -362,11 +362,11 @@ body.screen-shake { animation: screenShake 0.5s ease-out; }
 
 /* ========== FAKE REFRESH OVERLAY ========== */
 .fake-refresh-overlay {
-  position: fixed; inset: 0; z-index: 10010; pointer-events: all;
+  position: fixed; inset: 0; z-index: 10010; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  opacity: 0; background: #0a0a0a; transition: opacity 0.6s;
+  opacity: 0; visibility: hidden; background: #0a0a0a; transition: opacity 0.6s, visibility 0.6s;
 }
-.fake-refresh-overlay.active { opacity: 1; }
+.fake-refresh-overlay.active { opacity: 1; visibility: visible; pointer-events: all; }
 .fake-refresh-white {
   position: fixed; inset: 0; z-index: 10009; pointer-events: none;
   background: #fff; opacity: 0; transition: opacity 0.08s;
@@ -617,6 +617,7 @@ function switchToNormalBGM() {
 
   // Fade in MP3 BGM (primary)
   if (bgmAudio.readyState >= 2) {
+    bgmAudio.play().catch(() => {});
     smoothVolume(bgmAudio, bgmAudio.volume, 0.35, 2000);
   } else {
     // MP3 not ready yet — use Web Audio pad as filler
@@ -686,8 +687,11 @@ function createHorrorBGM() {
 async function triggerDarkFlash(durationMs = 300) {
   const overlay = document.getElementById('darkOverlay');
   overlay.classList.add('flash');
-  await sleep(durationMs);
-  overlay.classList.remove('flash');
+  try {
+    await sleep(durationMs);
+  } finally {
+    overlay.classList.remove('flash');
+  }
 }
 
 async function triggerGhostFace() {
@@ -702,29 +706,32 @@ async function triggerGhostFace() {
   ambient.volume = 0.5;
   ambient.play().catch(e => console.warn('Audio play failed:', e.message));
 
-  // Setup
-  ghostImg.style.opacity = '0';
-  ghostImg.style.transition = 'none';
-  await sleep(30);
+  try {
+    // Setup
+    ghostImg.style.opacity = '0';
+    ghostImg.style.transition = 'none';
+    await sleep(30);
 
-  // Fade in: 0.5s
-  ghostImg.style.transition = 'opacity 0.5s ease-in';
-  ghostImg.style.opacity = '0.95';
-  await sleep(500);
+    // Fade in: 0.5s
+    ghostImg.style.transition = 'opacity 0.5s ease-in';
+    ghostImg.style.opacity = '0.95';
+    await sleep(500);
 
-  // Hold at peak: 0.8s
-  await sleep(800);
+    // Hold at peak: 0.8s
+    await sleep(800);
 
-  // Fade out: 0.3s
-  ghostImg.style.transition = 'opacity 0.3s ease-out';
-  ghostImg.style.opacity = '0';
-  await sleep(300);
-
-  // Cleanup
-  darkOverlay.classList.remove('flash');
-  switchToNormalBGM();
-  ambient.pause();
-  ambient.currentTime = 0;
+    // Fade out: 0.3s
+    ghostImg.style.transition = 'opacity 0.3s ease-out';
+    ghostImg.style.opacity = '0';
+    await sleep(300);
+  } finally {
+    // Cleanup — MUST always run even if audio/animation fails
+    darkOverlay.classList.remove('flash');
+    ghostImg.style.opacity = '0';
+    switchToNormalBGM();
+    ambient.pause();
+    ambient.currentTime = 0;
+  }
   await sleep(370);
 }
 
@@ -858,16 +865,19 @@ async function triggerFalseSafety() {
   const overlay = document.getElementById('safetyOverlay');
   const msg = document.getElementById('safetyMsg');
   overlay.style.opacity = '1';
-  msg.textContent = '系统正常';
-  msg.classList.remove('crack');
-  await sleep(1200);
-  // Crack
-  msg.textContent = '系统正常';
-  msg.classList.add('crack');
-  await sleep(600);
-  msg.textContent = '他来了';
-  await sleep(800);
-  overlay.style.opacity = '0';
+  try {
+    msg.textContent = '系统正常';
+    msg.classList.remove('crack');
+    await sleep(1200);
+    // Crack
+    msg.textContent = '系统正常';
+    msg.classList.add('crack');
+    await sleep(600);
+    msg.textContent = '他来了';
+    await sleep(800);
+  } finally {
+    overlay.style.opacity = '0';
+  }
   await sleep(400);
 }
 
@@ -929,8 +939,11 @@ function deactivateCrawler() {
 // ---- Afterimage flash ----
 async function triggerAfterimage(durationMs = 500) {
   document.body.classList.add('afterimage');
-  await sleep(durationMs);
-  document.body.classList.remove('afterimage');
+  try {
+    await sleep(durationMs);
+  } finally {
+    document.body.classList.remove('afterimage');
+  }
 }
 
 // ---- Impostor detection ----
@@ -941,54 +954,58 @@ async function triggerImpostorCheck() {
   const failText = document.getElementById('impostorFail');
 
   overlay.classList.add('active');
+  overlay.style.visibility = 'visible';
   switchToHorrorBGM();
   setCreepyTitle('身份验证中...');
 
-  // Phase 1: scanning
-  label.textContent = '身份验证中';
-  failText.classList.remove('show');
-  bar.classList.remove('glitch-bar');
-  bar.style.width = '0%';
+  try {
+    // Phase 1: scanning
+    label.textContent = '身份验证中';
+    failText.classList.remove('show');
+    bar.classList.remove('glitch-bar');
+    bar.style.width = '0%';
 
-  // Fill progress bar with random jumps
-  for (let i = 0; i <= 85; i += 5 + Math.floor(Math.random() * 12)) {
-    bar.style.width = Math.min(i, 85) + '%';
-    await sleep(80 + Math.random() * 120);
+    // Fill progress bar with random jumps
+    for (let i = 0; i <= 85; i += 5 + Math.floor(Math.random() * 12)) {
+      bar.style.width = Math.min(i, 85) + '%';
+      await sleep(80 + Math.random() * 120);
+    }
+
+    // Phase 2: glitch - bar turns red, jitters
+    bar.classList.add('glitch-bar');
+    label.textContent = '⚠ 异常检测 ⚠';
+    bar.style.width = '92%';
+    await sleep(300);
+    bar.style.width = '67%';
+    await sleep(150);
+    bar.style.width = '95%';
+    await sleep(200);
+    bar.style.width = '71%';
+    await sleep(100);
+    bar.style.width = '99%';
+    await sleep(400);
+
+    // Phase 3: fail
+    label.textContent = '身份验证失败';
+    bar.style.width = '100%';
+    failText.classList.add('show');
+    await sleep(1200);
+
+    // Phase 4: reveal
+    label.textContent = '你不是你';
+    failText.textContent = '你是谁';
+    await sleep(1500);
+  } finally {
+    // Cleanup — MUST always run even if audio/animation fails
+    overlay.classList.remove('active');
+    overlay.style.visibility = 'hidden';
+    bar.classList.remove('glitch-bar');
+    bar.style.width = '0%';
+    label.textContent = '';
+    failText.textContent = '验证失败';
+    failText.classList.remove('show');
+    switchToNormalBGM();
   }
-
-  // Phase 2: glitch - bar turns red, jitters
-  bar.classList.add('glitch-bar');
-  label.textContent = '⚠ 异常检测 ⚠';
-  bar.style.width = '92%';
-  await sleep(300);
-  bar.style.width = '67%';
-  await sleep(150);
-  bar.style.width = '95%';
-  await sleep(200);
-  bar.style.width = '71%';
-  await sleep(100);
-  bar.style.width = '99%';
-  await sleep(400);
-
-  // Phase 3: fail
-  label.textContent = '身份验证失败';
-  bar.style.width = '100%';
-  failText.classList.add('show');
-  await sleep(1200);
-
-  // Phase 4: reveal
-  label.textContent = '你不是你';
-  failText.textContent = '你是谁';
-  await sleep(1500);
-
-  // Cleanup
-  overlay.classList.remove('active');
-  bar.classList.remove('glitch-bar');
-  bar.style.width = '0%';
-  label.textContent = '';
-  failText.textContent = '验证失败';
-  failText.classList.remove('show');
-  switchToNormalBGM();
 }
 
 // ---- Scare #14: Fake page refresh + doctor image warning ----
@@ -1001,53 +1018,55 @@ async function triggerFakeRefresh() {
   const img = document.getElementById('fakeRefreshImg');
   const mainContainer = document.getElementById('mainContainer');
 
-  // Phase 1: Blink the screen white (simulating a refresh attempt)
-  whiteFlash.style.opacity = '1';
-  document.body.classList.add('fake-refresh-blink');
-  await sleep(150);
-  document.body.classList.remove('fake-refresh-blink');
-  whiteFlash.style.opacity = '0';
+  try {
+    // Phase 1: Blink the screen white (simulating a refresh attempt)
+    whiteFlash.style.opacity = '1';
+    document.body.classList.add('fake-refresh-blink');
+    await sleep(150);
+    document.body.classList.remove('fake-refresh-blink');
+    whiteFlash.style.opacity = '0';
 
-  // Phase 2: Short pause, user thinks page is refreshing
-  await sleep(400);
+    // Phase 2: Short pause, user thinks page is refreshing
+    await sleep(400);
 
-  // Phase 3: Dark overlay appears with warning
-  mainContainer.style.opacity = '0';
-  await sleep(200);
+    // Phase 3: Dark overlay appears with warning
+    mainContainer.style.opacity = '0';
+    await sleep(200);
 
-  // Hide main content, show fake refresh warning
-  mainContainer.style.display = 'none';
-  overlay.classList.add('active');
-  document.title = '⚠ 测试无法终止';
+    // Hide main content, show fake refresh warning
+    mainContainer.style.display = 'none';
+    overlay.classList.add('active');
+    document.title = '⚠ 测试无法终止';
 
-  // Fade in doctor image slowly
-  await sleep(600);
-  img.classList.add('show');
-  await sleep(800);
+    // Fade in doctor image slowly
+    await sleep(600);
+    img.classList.add('show');
+    await sleep(800);
 
-  // Play heartbeat for tension
-  hbNormal.currentTime = 0;
-  hbNormal.volume = 0.15;
-  hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
+    // Play heartbeat for tension
+    hbNormal.currentTime = 0;
+    hbNormal.volume = 0.15;
+    hbNormal.play().catch(e => console.warn('Audio play failed:', e.message));
 
-  // Hold the warning for effect
-  await sleep(3500);
+    // Hold the warning for effect
+    await sleep(3500);
+  } finally {
+    // Cleanup — MUST always run even if audio/animation fails
+    overlay.classList.remove('active');
+    img.classList.remove('show');
+    document.title = originalTitle;
 
-  // Phase 4: Warning fades, test resumes
-  overlay.classList.remove('active');
-  img.classList.remove('show');
-  document.title = originalTitle;
+    // Fade out heartbeat
+    smoothVolume(hbNormal, 0.15, 0, 1000);
+    setTimeout(() => { hbNormal.pause(); hbNormal.currentTime = 0; }, 1100);
 
-  // Fade out heartbeat
-  smoothVolume(hbNormal, 0.15, 0, 1000);
-  setTimeout(() => { hbNormal.pause(); hbNormal.currentTime = 0; }, 1100);
+    await sleep(800);
 
-  await sleep(800);
-
-  // Restore main content
-  mainContainer.style.display = '';
-  mainContainer.style.opacity = '1';
-  switchToNormalBGM();
+    // Restore main content
+    mainContainer.style.display = '';
+    mainContainer.style.opacity = '1';
+    switchToNormalBGM();
+  }
 }
 
 // ---- Scare #11: Child's laughter ----
@@ -1055,26 +1074,32 @@ async function triggerChildLaugh() {
   switchToHorrorBGM();
   setCreepyTitle('嘻嘻...');
 
-  // Sudden burst of creepy child laughter
-  laughChild.currentTime = 0;
-  laughChild.volume = 0.6;
-  laughChild.play().catch(e => console.warn('Audio play failed:', e.message));
-
-  // Screen flicker with brief red tint
   const overlay = document.getElementById('darkOverlay');
   overlay.style.background = 'rgba(80,0,0,0.3)';
   overlay.classList.add('flash');
-  await sleep(300);
-  overlay.classList.remove('flash');
-  overlay.style.background = '';
 
-  await sleep(200);
-  // Second burst
-  laughChild.currentTime = 0;
-  laughChild.play().catch(e => console.warn('Audio play failed:', e.message));
+  try {
+    // Sudden burst of creepy child laughter
+    laughChild.currentTime = 0;
+    laughChild.volume = 0.6;
+    laughChild.play().catch(e => console.warn('Audio play failed:', e.message));
 
-  await sleep(800);
-  switchToNormalBGM();
+    // Screen flicker with brief red tint
+    await sleep(300);
+    overlay.classList.remove('flash');
+    overlay.style.background = '';
+
+    await sleep(200);
+    // Second burst
+    laughChild.currentTime = 0;
+    laughChild.play().catch(e => console.warn('Audio play failed:', e.message));
+
+    await sleep(800);
+  } finally {
+    overlay.classList.remove('flash');
+    overlay.style.background = '';
+    switchToNormalBGM();
+  }
 }
 
 // ---- Scare #12: Witch voice ----
@@ -1092,24 +1117,24 @@ async function triggerWitchVoice() {
   voiceWitch.volume = 0.5;
   voiceWitch.play().catch(e => console.warn('Audio play failed:', e.message));
 
-  // Glitch text appears
-  triggerGlitchText('它 在 说 话');
+  try {
+    // Glitch text appears
+    triggerGlitchText('它 在 说 话');
+    await sleep(1500);
 
-  await sleep(1500);
+    // Second glitch
+    triggerGlitchText('你听到了吗');
+    await sleep(1500);
+  } finally {
+    overlay.classList.remove('flash');
+    overlay.style.background = '';
 
-  // Second glitch
-  triggerGlitchText('你听到了吗');
+    // Stop witch audio
+    smoothVolume(voiceWitch, voiceWitch.volume, 0, 500);
+    setTimeout(() => { voiceWitch.pause(); voiceWitch.currentTime = 0; }, 600);
 
-  await sleep(1500);
-
-  overlay.classList.remove('flash');
-  overlay.style.background = '';
-
-  // Stop witch audio
-  smoothVolume(voiceWitch, voiceWitch.volume, 0, 500);
-  setTimeout(() => { voiceWitch.pause(); voiceWitch.currentTime = 0; }, 600);
-
-  switchToNormalBGM();
+    switchToNormalBGM();
+  }
 }
 
 // ---- Scare #13: Crying woman ----
@@ -1128,25 +1153,26 @@ async function triggerCryingWoman() {
   overlay.style.transition = 'background 3s';
   overlay.style.background = 'rgba(0,0,0,0.5)';
   overlay.classList.add('flash');
-  await sleep(3000);
 
-  // Hold for maximum effect
-  await sleep(2000);
+  try {
+    await sleep(3000);
+    // Hold for maximum effect
+    await sleep(2000);
 
-  // Glitch text
-  triggerGlitchText('她还在哭');
+    // Glitch text
+    triggerGlitchText('她还在哭');
+    await sleep(1500);
+  } finally {
+    // Fade out
+    overlay.classList.remove('flash');
+    overlay.style.background = '';
+    overlay.style.transition = '';
 
-  await sleep(1500);
+    smoothVolume(cryWoman, cryWoman.volume, 0, 1500);
+    setTimeout(() => { cryWoman.pause(); cryWoman.currentTime = 0; }, 1600);
 
-  // Fade out
-  overlay.classList.remove('flash');
-  overlay.style.background = '';
-  overlay.style.transition = '';
-
-  smoothVolume(cryWoman, cryWoman.volume, 0, 1500);
-  setTimeout(() => { cryWoman.pause(); cryWoman.currentTime = 0; }, 1600);
-
-  switchToNormalBGM();
+    switchToNormalBGM();
+  }
 }
 
 function triggerOptionRedFlash(optionEl) {
@@ -1429,10 +1455,16 @@ async function triggerScareEvent(q, el, index) {
   }
 }
 
+let transitioning = false;  // Guard against double-click on next button
+
 // ==================== NEXT BUTTON ====================
 document.getElementById('nextBtn').addEventListener('click', async () => {
   if (selectedOption < 0) return;
+  if (scareLocked) return;  // Don't advance during scare animation
+  if (transitioning) return;  // Don't double-advance
+  transitioning = true;
 
+  try {
   const q = questions[currentQuestion];
 
   // Special handling for final question
@@ -1477,6 +1509,9 @@ document.getElementById('nextBtn').addEventListener('click', async () => {
   // Fade in
   await sleep(100);
   document.getElementById('mainContainer').style.opacity = '1';
+  } finally {
+    transitioning = false;
+  }
 });
 
 // ==================== ENDING ====================
